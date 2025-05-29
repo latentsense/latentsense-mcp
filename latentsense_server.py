@@ -22,15 +22,11 @@ class LatentsenseClient:
     def __init__(self, config: LatentsenseConfig):
         self.config = config
         self.client = httpx.AsyncClient(
-            headers={"x-api-key": self.config.api_key},
-            timeout=30.0
+            headers={"x-api-key": self.config.api_key}, timeout=30.0
         )
 
     async def _make_request(
-            self,
-            endpoint: str,
-            method: str = "GET",
-            **kwargs
+        self, endpoint: str, method: str = "GET", **kwargs
     ) -> Dict[str, Any]:
         """Make an HTTP request to the Latentsense API."""
         url = f"{self.config.base_url}{endpoint}"
@@ -43,14 +39,14 @@ class LatentsenseClient:
             raise Exception(f"API request failed: {str(e)}")
 
     async def get_project_runs(
-            self,
-            filter_cog_name: Optional[str] = None,
-            filter_user_id: Optional[str] = None,
-            filter_api_key_id: Optional[str] = None,
-            page: int = 1,
-            rows_per_page: int = 50,
-            sort_by: str = "time",
-            descending: bool = True,
+        self,
+        filter_cog_name: Optional[str] = None,
+        filter_user_id: Optional[str] = None,
+        filter_api_key_id: Optional[str] = None,
+        page: int = 1,
+        rows_per_page: int = 50,
+        sort_by: str = "time",
+        descending: bool = True,
     ) -> Dict[str, Any]:
         """Get all past cog runs in a project with optional filtering and sorting."""
         params = {}
@@ -78,11 +74,11 @@ class LatentsenseClient:
         return await self._make_request(endpoint)
 
     async def _upload_files(
-            self,
-            endpoint: str,
-            files: List[str],
-            additional_files: Optional[Dict[str, str]] = None,
-            form_data: Optional[Dict[str, str]] = None
+        self,
+        endpoint: str,
+        files: List[str],
+        additional_files: Optional[Dict[str, str]] = None,
+        form_data: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """Helper method to upload files with form data."""
         # Validate files exist
@@ -100,15 +96,15 @@ class LatentsenseClient:
 
         # Add main files
         for file_path in files:
-            async with aiofiles.open(file_path, 'rb') as f:
+            async with aiofiles.open(file_path, "rb") as f:
                 content = await f.read()
-                files_data.append(('files', (Path(file_path).name, content)))
+                files_data.append(("files", (Path(file_path).name, content)))
 
         # Add additional files
         if additional_files:
             for field_name, file_path in additional_files.items():
                 if file_path:
-                    async with aiofiles.open(file_path, 'rb') as f:
+                    async with aiofiles.open(file_path, "rb") as f:
                         content = await f.read()
                         files_data.append((field_name, (Path(file_path).name, content)))
 
@@ -116,10 +112,7 @@ class LatentsenseClient:
         data = form_data or {}
 
         return await self._make_request(
-            endpoint,
-            method="POST",
-            files=files_data,
-            data=data
+            endpoint, method="POST", files=files_data, data=data
         )
 
     async def redact_pii(self, files: List[str]) -> Dict[str, Any]:
@@ -128,10 +121,7 @@ class LatentsenseClient:
         return await self._upload_files(endpoint, files)
 
     async def redact_relevance(
-            self,
-            files: List[str],
-            relevance_term_file: str,
-            cutoff: float
+        self, files: List[str], relevance_term_file: str, cutoff: float
     ) -> Dict[str, Any]:
         """Remove information from documents that is relevant to a given intent text."""
         endpoint = f"/{self.config.project_id}/redact-relevance"
@@ -139,31 +129,27 @@ class LatentsenseClient:
         form_data = {"cutoff": str(cutoff)}
 
         return await self._upload_files(
-            endpoint,
-            files,
-            additional_files=additional_files,
-            form_data=form_data
+            endpoint, files, additional_files=additional_files, form_data=form_data
         )
 
     async def extract_relationships(
-            self,
-            files: List[str],
-            claim_concepts_file: str
+        self, files: List[str], claim_concepts_file: str
     ) -> Dict[str, Any]:
         """List relationship propositions in documents that are salient and relevant to intent text."""
         endpoint = f"/{self.config.project_id}/relationships-from-premises"
         additional_files = {"claim_concepts": claim_concepts_file}
 
-        return await self._upload_files(endpoint, files,
-                                        additional_files=additional_files)
+        return await self._upload_files(
+            endpoint, files, additional_files=additional_files
+        )
 
     async def create_knowledge_graph(
-            self,
-            files: List[str],
-            files2: Optional[List[str]] = None,
-            concepts_file: Optional[str] = None,
-            files1_name: Optional[str] = None,
-            files2_name: Optional[str] = None,
+        self,
+        files: List[str],
+        files2: Optional[List[str]] = None,
+        concepts_file: Optional[str] = None,
+        files1_name: Optional[str] = None,
+        files2_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Create a knowledge map where nodes are concepts and edges are relationships."""
         endpoint = f"/{self.config.project_id}/reasoner-x"
@@ -175,37 +161,34 @@ class LatentsenseClient:
         for file_path in files:
             if not Path(file_path).exists():
                 raise FileNotFoundError(f"File not found: {file_path}")
-            async with aiofiles.open(file_path, 'rb') as f:
+            async with aiofiles.open(file_path, "rb") as f:
                 content = await f.read()
-                files_data.append(('files', (Path(file_path).name, content)))
+                files_data.append(("files", (Path(file_path).name, content)))
 
         # Add second set of files if provided
         if files2:
             for file_path in files2:
                 if not Path(file_path).exists():
                     raise FileNotFoundError(f"File not found: {file_path}")
-                async with aiofiles.open(file_path, 'rb') as f:
+                async with aiofiles.open(file_path, "rb") as f:
                     content = await f.read()
-                    files_data.append(('files2', (Path(file_path).name, content)))
+                    files_data.append(("files2", (Path(file_path).name, content)))
 
         # Add concepts file if provided
         if concepts_file and Path(concepts_file).exists():
-            async with aiofiles.open(concepts_file, 'rb') as f:
+            async with aiofiles.open(concepts_file, "rb") as f:
                 content = await f.read()
-                files_data.append(('concepts', (Path(concepts_file).name, content)))
+                files_data.append(("concepts", (Path(concepts_file).name, content)))
 
         # Prepare form data
         data = {}
         if files1_name:
-            data['files1_name'] = files1_name
+            data["files1_name"] = files1_name
         if files2_name:
-            data['files2_name'] = files2_name
+            data["files2_name"] = files2_name
 
         return await self._make_request(
-            endpoint,
-            method="POST",
-            files=files_data,
-            data=data
+            endpoint, method="POST", files=files_data, data=data
         )
 
     async def get_rex_message(self, run_id: str) -> Dict[str, Any]:
@@ -215,10 +198,7 @@ class LatentsenseClient:
         return await self._make_request(endpoint, params=params)
 
     async def send_rex_message(
-            self,
-            message: str,
-            run_id: str,
-            graph: Optional[Dict[str, Any]] = None
+        self, message: str, run_id: str, graph: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Send a message to Rex (reasoning agent) based on a knowledge graph."""
         endpoint = f"/api/chat/{self.config.project_id}/message_rex"
@@ -226,10 +206,7 @@ class LatentsenseClient:
 
         if graph:
             return await self._make_request(
-                endpoint,
-                method="POST",
-                params=params,
-                json=graph
+                endpoint, method="POST", params=params, json=graph
             )
         else:
             return await self._make_request(endpoint, method="POST", params=params)
@@ -258,7 +235,9 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
 
     base_url = os.getenv("LATENTSENSE_BASE_URL", "https://controller.latentsense.com")
 
-    config = LatentsenseConfig(api_key=api_key, base_url=base_url)
+    config = LatentsenseConfig(
+        api_key=api_key, project_id=project_id, base_url=base_url
+    )
     client = LatentsenseClient(config)
 
     try:
@@ -273,14 +252,14 @@ mcp = FastMCP("latentsense-server", lifespan=app_lifespan)
 
 @mcp.tool()
 async def get_project_runs(
-        ctx: Context,
-        filter_cog_name: Optional[str] = None,
-        filter_user_id: Optional[str] = None,
-        filter_api_key_id: Optional[str] = None,
-        page: int = 1,
-        rows_per_page: int = 50,
-        sort_by: str = "time",
-        descending: bool = True,
+    ctx: Context,
+    filter_cog_name: Optional[str] = None,
+    filter_user_id: Optional[str] = None,
+    filter_api_key_id: Optional[str] = None,
+    page: int = 1,
+    rows_per_page: int = 50,
+    sort_by: str = "time",
+    descending: bool = True,
 ) -> str:
     """Get all past cog runs in a project with optional filtering and sorting.
 
@@ -296,13 +275,17 @@ async def get_project_runs(
     client = ctx.request_context.lifespan_context.latentsense_client
 
     # Validate filter_cog_name if provided
-    valid_cog_names = ['deidentification', 'relationships', 'ai_authorship_detection',
-                       'knowledge_graph']
+    valid_cog_names = [
+        "deidentification",
+        "relationships",
+        "ai_authorship_detection",
+        "knowledge_graph",
+    ]
     if filter_cog_name and filter_cog_name not in valid_cog_names:
         return f"Error: filter_cog_name must be one of {valid_cog_names}"
 
     # Validate sort_by
-    valid_sort_by = ['time', 'cost']
+    valid_sort_by = ["time", "cost"]
     if sort_by not in valid_sort_by:
         return f"Error: sort_by must be one of {valid_sort_by}"
 
@@ -338,17 +321,16 @@ async def get_run_results(ctx: Context, run_id: str) -> str:
 
 
 @mcp.tool()
-async def redact_pii(ctx: Context, project_id: str, files: List[str]) -> str:
+async def redact_pii(ctx: Context, files: List[str]) -> str:
     """Redact PII (Personal Identifiable Information) from documents.
 
     Args:
-        project_id: Unique ID of the Project
         files: Array of file paths to redact (txt, csv, json, html)
     """
     client = ctx.request_context.lifespan_context.latentsense_client
 
     try:
-        result = await client.redact_pii(project_id, files)
+        result = await client.redact_pii(files)
         return json.dumps(result, indent=2)
     except Exception as e:
         return f"Error: {str(e)}"
@@ -356,16 +338,14 @@ async def redact_pii(ctx: Context, project_id: str, files: List[str]) -> str:
 
 @mcp.tool()
 async def redact_relevance(
-        ctx: Context,
-        project_id: str,
-        files: List[str],
-        relevance_term_file: str,
-        cutoff: float,
+    ctx: Context,
+    files: List[str],
+    relevance_term_file: str,
+    cutoff: float,
 ) -> str:
     """Remove information from documents that is relevant to a given intent text.
 
     Args:
-        project_id: Unique ID of the Project
         files: Array of file paths to redact (txt, csv, json, html)
         relevance_term_file: Path to txt file with the subject to redact from the main text
         cutoff: Number between 0 and 1. Lower numbers result in more redaction
@@ -377,8 +357,7 @@ async def redact_relevance(
         return "Error: cutoff must be a number between 0 and 1"
 
     try:
-        result = await client.redact_relevance(project_id, files, relevance_term_file,
-                                               cutoff)
+        result = await client.redact_relevance(files, relevance_term_file, cutoff)
         return json.dumps(result, indent=2)
     except Exception as e:
         return f"Error: {str(e)}"
@@ -386,23 +365,20 @@ async def redact_relevance(
 
 @mcp.tool()
 async def extract_relationships(
-        ctx: Context,
-        project_id: str,
-        files: List[str],
-        claim_concepts_file: str,
+    ctx: Context,
+    files: List[str],
+    claim_concepts_file: str,
 ) -> str:
     """List relationship propositions in documents that are salient and relevant to intent text.
 
     Args:
-        project_id: Unique ID of the Project
         files: Array of file paths to analyze (txt, csv, json, html)
         claim_concepts_file: Path to txt file with a subject of interest
     """
     client = ctx.request_context.lifespan_context.latentsense_client
 
     try:
-        result = await client.extract_relationships(project_id, files,
-                                                    claim_concepts_file)
+        result = await client.extract_relationships(files, claim_concepts_file)
         return json.dumps(result, indent=2)
     except Exception as e:
         return f"Error: {str(e)}"
@@ -410,18 +386,16 @@ async def extract_relationships(
 
 @mcp.tool()
 async def create_knowledge_graph(
-        ctx: Context,
-        project_id: str,
-        files: List[str],
-        files2: Optional[List[str]] = None,
-        concepts_file: Optional[str] = None,
-        files1_name: str = "set_1",
-        files2_name: str = "set_2",
+    ctx: Context,
+    files: List[str],
+    files2: Optional[List[str]] = None,
+    concepts_file: Optional[str] = None,
+    files1_name: str = "set_1",
+    files2_name: str = "set_2",
 ) -> str:
     """Create a knowledge map where nodes are concepts and edges are relationships.
 
     Args:
-        project_id: Unique ID of the Project
         files: Array of file paths to map relationships from (txt, csv, json, html)
         files2: Additional set of files for comparison
         concepts_file: Path to txt file containing comma separated concepts expected to be nodes
@@ -432,7 +406,6 @@ async def create_knowledge_graph(
 
     try:
         result = await client.create_knowledge_graph(
-            project_id=project_id,
             files=files,
             files2=files2,
             concepts_file=concepts_file,
@@ -445,17 +418,16 @@ async def create_knowledge_graph(
 
 
 @mcp.tool()
-async def get_rex_message(ctx: Context, project_id: str, run_id: str) -> str:
+async def get_rex_message(ctx: Context, run_id: str) -> str:
     """Get Rex chat message history for a specific run.
 
     Args:
-        project_id: Unique ID of the Project
         run_id: The ReasonerX run ID to get messages for
     """
     client = ctx.request_context.lifespan_context.latentsense_client
 
     try:
-        result = await client.get_rex_message(project_id, run_id)
+        result = await client.get_rex_message(run_id)
         return json.dumps(result, indent=2)
     except Exception as e:
         return f"Error: {str(e)}"
@@ -463,16 +435,14 @@ async def get_rex_message(ctx: Context, project_id: str, run_id: str) -> str:
 
 @mcp.tool()
 async def send_rex_message(
-        ctx: Context,
-        project_id: str,
-        message: str,
-        run_id: str,
-        graph: Optional[Dict[str, Any]] = None,
+    ctx: Context,
+    message: str,
+    run_id: str,
+    graph: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Send a message to Rex (reasoning agent) based on a knowledge graph.
 
     Args:
-        project_id: Unique ID of the Project
         message: The message to send to Rex
         run_id: The ReasonerX run ID to reason under
         graph: Optional modified graph for the next message with nodes and edges
@@ -480,7 +450,7 @@ async def send_rex_message(
     client = ctx.request_context.lifespan_context.latentsense_client
 
     try:
-        result = await client.send_rex_message(project_id, message, run_id, graph)
+        result = await client.send_rex_message(message, run_id, graph)
         return json.dumps(result, indent=2)
     except Exception as e:
         return f"Error: {str(e)}"
