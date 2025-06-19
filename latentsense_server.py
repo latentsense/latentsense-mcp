@@ -136,14 +136,14 @@ class LatentsenseClient:
         self, files: List[str], claim_concepts_file: str
     ) -> Dict[str, Any]:
         """List relationship propositions in documents that are salient and relevant to intent text."""
-        endpoint = f"/{self.config.project_id}/relationships-from-premises"
+        endpoint = f"/{self.config.project_id}/salient-relationships"
         additional_files = {"claim_concepts": claim_concepts_file}
 
         return await self._upload_files(
             endpoint, files, additional_files=additional_files
         )
 
-    async def create_knowledge_graph(
+    async def create_rex_map(
         self,
         files: List[str],
         files2: Optional[List[str]] = None,
@@ -151,8 +151,8 @@ class LatentsenseClient:
         files1_name: Optional[str] = None,
         files2_name: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Create a knowledge map where nodes are concepts and edges are relationships."""
-        endpoint = f"/{self.config.project_id}/reasoner-x"
+        """Create a ReX knowledge map where nodes are concepts and edges are relationships."""
+        endpoint = f"/{self.config.project_id}/rex-map"
 
         # Prepare files data
         files_data = []
@@ -193,7 +193,7 @@ class LatentsenseClient:
 
     async def get_rex_message(self, run_id: str) -> Dict[str, Any]:
         """Get Rex chat message history for a specific run."""
-        endpoint = f"/api/chat/{self.config.project_id}/message_rex"
+        endpoint = f"/api/chat/{self.config.project_id}/rex-message"
         params = {"run_id": run_id}
         return await self._make_request(endpoint, params=params)
 
@@ -201,7 +201,7 @@ class LatentsenseClient:
         self, message: str, run_id: str, graph: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Send a message to Rex (reasoning agent) based on a knowledge graph."""
-        endpoint = f"/api/chat/{self.config.project_id}/message_rex"
+        endpoint = f"/api/chat/{self.config.project_id}/rex-message"
         params = {"message": message, "run_id": run_id}
 
         if graph:
